@@ -25,7 +25,7 @@ def evaluate(model, adj_matrix, targets, metric_fn, start_idx=None, end_idx=None
     return metric_fn(preds, targets)
 
 
-def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, vocab_size, epochs=100, init_lr=0.001, val_every=1, print_every=10, plot_every=5, save_path='logs/train.pt'):
+def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, vocab_size, epochs=100, init_lr=0.001, early_stop_threshold=10, val_every=1, print_every=10, plot_every=5, save_path='logs/train.pt'):
     loss_fn = nn.CrossEntropyLoss()
     optim = Adam(model.parameters(), lr=init_lr)
 
@@ -56,20 +56,23 @@ def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, voc
 
         if epoch % val_every == 0:
             val_loss = evaluate(model, val_adj_matrix, val_labels, loss_fn, start_idx=val_start_idx, end_idx=test_start_idx)
-            if val_loss <= best_val_loss:
-                torch.save(model.state_dict(), save_path)
+            # if val_loss <= best_val_loss:
+            #     best_val_loss = val_loss
+            #     torch.save(model.state_dict(), save_path)
             
             val_losses.append(val_loss.data.item())
             if epoch % print_every == 0:
                 print('Validation mean cross-entropy:', val_loss.item())
             
-            # if val_loss <= best_val_loss:
-            #     epochs_with_no_improvement = 0
-            # else:
-            #     epochs_with_no_improvement += 1
+            if val_loss <= best_val_loss:
+                best_val_loss = val_loss
+                torch.save(model.state_dict(), save_path)
+                epochs_with_no_improvement = 0
+            else:
+                epochs_with_no_improvement += 1
             
-            # if epochs_with_no_improvement == stop_threshold:
-            #     break
+            if epochs_with_no_improvement == early_stop_threshold:
+                break
     
     model.load_state_dict(torch.load(save_path))
     return train_losses, val_losses
@@ -115,7 +118,7 @@ if __name__ == '__main__':
     model = GCN(num_vertices, hidden_size, len(labels), len(vocab), dropout=dropout)
 
     print('Start training')
-    train_losses, val_losses = train(model, train_adj_matrix, val_adj_matrix, train_corpus.labels(), val_corpus.labels(), len(vocab), epochs=epochs)
+    train_losses, val_losses = train(model, train_adj_matrix, val_adj_matrix, train_corpus.labels(), val_corpus.labels(), len(vocab), epochs=epochs, early_stop_threshold=10)
     print(train_losses)
     print(val_losses)
 
