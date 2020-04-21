@@ -2,6 +2,8 @@ from collections import defaultdict
 from math import log
 
 from nltk.corpus import stopwords
+import numpy as np
+import scipy.sparse as sp
 import torch
 import torch.sparse as sparse
 from tqdm.auto import tqdm, trange
@@ -133,14 +135,25 @@ def build_adj_matrix(corpus, vocabulary, num_documents, doc_offset=0, window_siz
     entries = torch.FloatTensor(entries)
     return sparse.FloatTensor(indices, entries, torch.Size([num_vertices, num_vertices]))
 
-# def build_adj_matrix_dense(corpus, vocabulary):
-#     """Builds the adjacency matrix for the text-document graph with as a regular dense tensor"""
-#     # indices correspond to words in the vocabulary, then documents in order of the corpus
-#     adj = torch.eye(num_vertices)
-#     for i, doc in enumerate(corpus):
-#         adj_idx = len(vocabulary) + i
-#         text = doc.text
-#         for word in text:
+
+def normalize_adj(adj):
+    """Symmetrically normalize adjacency matrix."""
+    adj = adj.coalesce()
+    sp_adj = sp.coo_matrix((adj.values(), adj.indices()), shape=list(adj.size()))
+
+    rowsum = np.array(sp_adj.sum(axis=1))
+    d_inv_sqrt = np.power(rowsum, -0.5).flatten()
+    d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
+    d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
+    norm_sp_adj = sp_adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
+
+    entries = norm_sp_adj.data
+    row = norm_sp_adj.row
+    col = norm_sp_adj.col
+    indices = torch.LongTensor([row, col])
+    entries = torch.FloatTensor(entries)
+    return sparse.FloatTensor(indices, entries, adj.size())
+
 
 if __name__ == '__main__':
     from src.data import Corpus, get_data, get_vocabulary, get_labels

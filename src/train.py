@@ -1,10 +1,16 @@
 import random
+from sklearn.metrics import accuracy_score
 import torch
 import torch.nn as nn
 from torch.optim import Adam
 
 from src.data import Corpus, get_data, get_vocabulary, get_labels
-from src.preprocessing import clean_text, build_adj_matrix
+from src.preprocessing import clean_text, build_adj_matrix, normalize_adj
+
+
+def accuracy(preds, targets):
+    label_preds = torch.argmax(preds, dim=-1)
+    return accuracy_score(targets, label_preds)
 
 
 def evaluate(model, adj_matrix, targets, metric_fn, start_idx=None, end_idx=None):
@@ -97,14 +103,19 @@ if __name__ == '__main__':
     val_adj_matrix = build_adj_matrix(val_corpus, vocab, num_documents, doc_offset=len(train_corpus))
     test_adj_matrix = build_adj_matrix(test_corpus, vocab, num_documents, doc_offset=len(train_corpus) + len(val_corpus))
 
+    train_adj_matrix = normalize_adj(train_adj_matrix)
+    val_adj_matrix = normalize_adj(val_adj_matrix)
+    test_adj_matrix = normalize_adj(test_adj_matrix)
+
     hidden_size = 200  # hyperparameter
     dropout = 0.5  # hyperparameter
+    epochs = 500
 
     num_vertices = len(vocab) + num_documents
     model = GCN(num_vertices, hidden_size, len(labels), len(vocab), dropout=dropout)
 
     print('Start training')
-    train_losses, val_losses = train(model, train_adj_matrix, val_adj_matrix, train_corpus.labels(), val_corpus.labels(), len(vocab), epochs=10, seed=seed, plot_every=1)
+    train_losses, val_losses = train(model, train_adj_matrix, val_adj_matrix, train_corpus.labels(), val_corpus.labels(), len(vocab), epochs=epochs)
     print(train_losses)
     print(val_losses)
 
