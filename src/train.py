@@ -4,32 +4,33 @@ import torch.nn as nn
 from torch.optim import Adam
 
 from src.data import Corpus, get_data, get_vocabulary, get_labels
-from src.preprocessing import mask_unknown_words, build_adj_matrix
+from src.preprocessing import clean_text, build_adj_matrix
 
 
-def evaluate(model, adj_matrix, targets, metric_fn):
+def evaluate(model, adj_matrix, targets, metric_fn, start_idx=None, end_idx=None):
     model.eval()
     with torch.no_grad():
         preds = model(adj_matrix)
+    
+    if start_idx is None: start_idx = 0
+    if end_idx is None: end_idx = preds.size(0)
+    preds = preds[start_idx:end_idx, :]
+
     return metric_fn(preds, targets)
 
 
-def train(model, corpus, epochs=100, init_lr=0.001, val_split=0.1, val_every=1, seed=None, print_every=10, plot_every=5, save_path='logs/train.pt'):
-    # Split validation set
-    corpus.shuffle(seed)
-    len_train = int(len(corpus) * (1 - val_split))
-    train_corpus = Corpus(corpus[:len_train])
-    val_corpus = Corpus(corpus[len_train:])
-
-    train_adj_matrix = build_adj_matrix(train_corpus, vocabulary)
-    val_adj_matrix = build_adj_matrix(val_corpus, vocabulary)
-
+def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, vocab_size, epochs=100, init_lr=0.001, val_every=1, print_every=10, plot_every=5, save_path='logs/train.pt'):
     loss_fn = nn.CrossEntropyLoss()
     optim = Adam(model.parameters(), lr=init_lr)
+
+    train_size, val_size = len(train_labels), len(val_labels)
+    val_start_idx = vocab_size + train_size
+    test_start_idx = vocab_size + train_size + val_size
 
     train_losses = []
     val_losses = []
     best_val_loss = float('inf')
+    # epochs_with_no_improvement = 0
     for epoch in range(epochs):
         if epoch % print_every == 0:
             print('Epoch', epoch)
@@ -38,53 +39,75 @@ def train(model, corpus, epochs=100, init_lr=0.001, val_split=0.1, val_every=1, 
         model.zero_grad()
 
         out = model(train_adj_matrix)
-        loss = loss_fn(out, train_corpus.labels())
+        out = out[vocab_size:val_start_idx, :]
+        loss = loss_fn(out, train_labels)
         loss.backward()
         optim.step()
 
         train_losses.append(loss.data.item())
         if epoch % print_every == 0:
-            print('Train mean cross-entropy:', val_loss)
+            print('Train mean cross-entropy:', loss.item())
 
         if epoch % val_every == 0:
-            val_loss = evaluate(model, val_adj_matrix, val_corpus.labels(), loss_fn)
+            val_loss = evaluate(model, val_adj_matrix, val_labels, loss_fn, start_idx=val_start_idx, end_idx=test_start_idx)
             if val_loss <= best_val_loss:
                 torch.save(model.state_dict(), save_path)
             
             val_losses.append(val_loss.data.item())
             if epoch % print_every == 0:
-                print('Validation mean cross-entropy:', val_loss)
+                print('Validation mean cross-entropy:', val_loss.item())
+            
+            # if val_loss <= best_val_loss:
+            #     epochs_with_no_improvement = 0
+            # else:
+            #     epochs_with_no_improvement += 1
+            
+            # if epochs_with_no_improvement == stop_threshold:
+            #     break
     
     model.load_state_dict(torch.load(save_path))
     return train_losses, val_losses
     
 
 if __name__ == '__main__':
-    seed = 0
-
     from src.data import Corpus, get_data, get_vocabulary, get_labels
+    from src.preprocessing import clean_text, build_adj_matrix
+    from src.models.gcn import GCN
+    
+    seed = 0
+    val_split = 0.1
+
     vocab = get_vocabulary('data/20ng-vocabulary.txt')
     labels = get_labels('data/20ng-labels.txt')
     corpus = get_data('data/train-20news.txt', labels)
     test_corpus = get_data('data/test-20news.txt', labels)
 
-    from src.preprocessing import mask_unknown_words, build_adj_matrix
-
     # Mask out unknown words
-    mask_unknown_words(corpus, vocab)
-    mask_unknown_words(test_corpus, vocab)
+    clean_text(corpus, vocab)
+    clean_text(test_corpus, vocab)
 
-    from src.models.gcn import GCN
+    # Split validation set
+    corpus.shuffle(seed)
+    len_train = int(len(corpus) * (1 - val_split))
+    train_corpus = Corpus(corpus[:len_train])
+    val_corpus = Corpus(corpus[len_train:])
+
+    num_documents = len(train_corpus) + len(val_corpus) + len(test_corpus)
+    train_adj_matrix = build_adj_matrix(train_corpus, vocab, num_documents, doc_offset=0)
+    val_adj_matrix = build_adj_matrix(val_corpus, vocab, num_documents, doc_offset=len(train_corpus))
+    test_adj_matrix = build_adj_matrix(test_corpus, vocab, num_documents, doc_offset=len(train_corpus) + len(val_corpus))
+
     hidden_size = 200  # hyperparameter
     dropout = 0.5  # hyperparameter
 
-    num_vertices = len(vocab) + len(corpus)
-    model = GCN(num_vertices, hidden_size, 2, len(vocab), dropout=dropout)
+    num_vertices = len(vocab) + num_documents
+    model = GCN(num_vertices, hidden_size, len(labels), len(vocab), dropout=dropout)
 
-    train_losses, val_losses = train(model, corpus, epochs=10, seed=seed, plot_every=1)
+    print('Start training')
+    train_losses, val_losses = train(model, train_adj_matrix, val_adj_matrix, train_corpus.labels(), val_corpus.labels(), len(vocab), epochs=10, seed=seed, plot_every=1)
     print(train_losses)
     print(val_losses)
 
-    test_adj = build_adj_matrix(test_corpus, vocab)
-    test_loss = evaluate(model, test_adj, test_corpus.labels(), nn.CrossEntropyLoss())
+    test_start_idx = vocab_size + train_size + val_size
+    test_loss = evaluate(model, test_adj_matrix, test_corpus.labels(), nn.CrossEntropyLoss(), start_idx=test_start_idx)
     print(test_loss)

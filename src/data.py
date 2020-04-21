@@ -1,4 +1,5 @@
 import random
+import torch
 from torch.utils.data import Dataset
 
 UNKNOWN_TOKEN = '<unk>'
@@ -26,7 +27,7 @@ class Corpus(Dataset):
         random.shuffle(self.data)
     
     def labels(self):
-        return [doc.label for doc in self.data]
+        return torch.LongTensor([doc.label for doc in self.data])
 
 
 def get_vocabulary(vocab_path):
@@ -58,7 +59,7 @@ def get_data(data_path, all_labels):
         for line in f.readlines():
             line = line.strip()
             label, text = line.split('\t')
-            doc = Document(text, label_to_index[label])
+            doc = Document(text.split(), label_to_index[label])
             documents.append(doc)
     
     return Corpus(documents)
@@ -70,7 +71,7 @@ def save_all_labels(out_path, train_path, test_path):
         with open(data_path, 'r') as f:
             for line in f.readlines():
                 line = line.strip()
-                label, text = line.split('\t')
+                label, _ = line.split('\t')
                 labels.add(label)
     labels = list(labels)
     with open(out_path, 'w+') as f:

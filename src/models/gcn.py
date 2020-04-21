@@ -36,12 +36,11 @@ class GraphConv(nn.Module):
 
 
 class GCN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, vocab_size, dropout=0.):
+    def __init__(self, input_size, hidden_size, output_size, dropout=0.):
         super(GCN, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
-        self.vocab_size = vocab_size
 
         self.dropout = nn.Dropout(dropout)
         self.act_func = nn.ReLU()
@@ -55,7 +54,6 @@ class GCN(nn.Module):
         out = self.act_func(self.layer1(adj_matrix, inp))
         out = self.dropout(out)
         out = self.layer2(adj_matrix, out)
-        out = out[vocab_size:, :]  # get rows for documents
         
         if not self.training:
             out = self.softmax(out)
