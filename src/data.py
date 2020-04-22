@@ -1,6 +1,7 @@
 import random
 import torch
 from torch.utils.data import Dataset
+from tqdm.auto import tqdm
 
 UNKNOWN_TOKEN = '<unk>'
 
@@ -76,6 +77,28 @@ def save_all_labels(out_path, train_path, test_path):
     labels = list(labels)
     with open(out_path, 'w+') as f:
         f.write('\n'.join(labels))
+
+
+def save_vocabulary(out_path, train_path, test_path, doc_freq_threshold=5):
+    word_freqs = {}  # counting num of docs
+    for data_path in [train_path, test_path]:
+        with open(data_path, 'r') as f:
+            for line in tqdm(f.readlines()):
+                line = line.strip()
+                _, text = line.split('\t')
+                words = text.split()
+                for w in set(words):
+                    w = w.strip()
+                    if w in word_freqs:
+                        word_freqs[w] += 1
+                    else:
+                        word_freqs[w] = 1
+    vocab = []
+    for w, freq in word_freqs.items():
+        if freq >= doc_freq_threshold:
+            vocab.append(w)
+    with open(out_path, 'w+') as f:
+        f.write('\n'.join(vocab))
 
 
 if __name__ == '__main__':
