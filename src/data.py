@@ -103,4 +103,5 @@ def save_vocabulary(out_path, train_path, test_path, doc_freq_threshold=5):
 
 if __name__ == '__main__':
     import sys
-    save_all_labels('data/20ng-labels.txt', 'data/train-20news.txt', 'data/test-20news.txt')
+    save_all_labels('data/ohsumed-labels.txt', 'data/train-ohsumed.txt', 'data/test-ohsumed.txt')
+    save_vocabulary('data/ohsumed-labels.txt', 'data/train-ohsumed.txt', 'data/test-ohsumed.txt')
