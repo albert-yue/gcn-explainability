@@ -32,24 +32,24 @@ class Corpus(Dataset):
 
 
 def get_vocabulary(vocab_path):
-    vocabulary = set()
+    vocabulary = []
     with open(vocab_path, 'r') as f:
         for line in f.readlines():
             word = line.strip()
-            vocabulary.add(word)
-    vocabulary = list(vocabulary)
+            vocabulary.append(word)
+    vocabulary = vocabulary
     # Add token for unknown tokens
     vocabulary.append(UNKNOWN_TOKEN)
     return vocabulary
 
 
 def get_labels(labels_path):
-    labels = set()
+    labels = []
     with open(labels_path, 'r') as f:
         for line in f.readlines():
             word = line.strip()
-            labels.add(word)
-    return list(labels)
+            labels.append(word)
+    return labels
 
 
 def get_data(data_path, all_labels):
