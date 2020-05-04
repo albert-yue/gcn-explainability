@@ -25,7 +25,7 @@ def evaluate(model, adj_matrix, targets, metric_fn, start_idx=None, end_idx=None
     return metric_fn(preds, targets)
 
 
-def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, vocab_size, epochs=100, init_lr=0.001, early_stop_threshold=10, val_every=1, print_every=10, plot_every=5, save_path='logs/train.pt'):
+def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, vocab_size, epochs=200, init_lr=0.02, early_stop_threshold=10, val_every=1, print_every=10, plot_every=5, save_path='logs/train.pt'):
     loss_fn = nn.CrossEntropyLoss()
     optim = Adam(model.parameters(), lr=init_lr)
 
