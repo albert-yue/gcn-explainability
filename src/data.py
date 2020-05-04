@@ -31,6 +31,37 @@ class Corpus(Dataset):
         return torch.LongTensor([doc.label for doc in self.data])
 
 
+class SyntaxTree:
+    def __init__(self, text, tree, label):
+        '''
+        :param text: list of strings, representing the words with the sentence
+        :param tree: list of indices of corresponding parent words in the text (0-index)
+            with -1 indicating the root
+        '''
+        self.text = text
+        self.tree = tree
+        self.label = label
+
+
+class Treebank(Dataset):
+    def __init__(self, trees):
+        self.data = trees
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, item):
+        return self.data[item]
+    
+    def shuffle(self, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        random.shuffle(self.data)
+    
+    def labels(self):
+        return torch.FloatTensor([tree.label for tree in self.data])
+
+
 def get_vocabulary(vocab_path):
     vocabulary = []
     with open(vocab_path, 'r') as f:
@@ -64,6 +95,14 @@ def get_data(data_path, all_labels):
             documents.append(doc)
     
     return Corpus(documents)
+
+
+def get_treebank_data(data_path):
+    '''
+    Loads the Stanford Sentiment Treebank data
+    Sentiment labels are between 1 and 25, where 
+    '''
+    pass
 
 
 def save_all_labels(out_path, train_path, test_path):
