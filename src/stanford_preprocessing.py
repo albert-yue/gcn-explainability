@@ -124,11 +124,11 @@ def parse_tree(line):
 
 def extract_tokens(root):
     if len(root.children) == 0:
-        return [root.text]
+        return [root.text] if len(root.text) > 0 else []
     
     left = extract_tokens(root.children[0])
     right = extract_tokens(root.children[-1])
-    return left + [root.text] + right
+    return left + [root.text] + right  if len(root.text) > 0 else left + right
 
 
 def extract_sentence(root):
