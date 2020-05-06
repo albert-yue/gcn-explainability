@@ -97,14 +97,6 @@ def get_data(data_path, all_labels):
     return Corpus(documents)
 
 
-def get_treebank_data(data_path):
-    '''
-    Loads the Stanford Sentiment Treebank data
-    Sentiment labels are between 1 and 25, where 
-    '''
-    pass
-
-
 def save_all_labels(out_path, train_path, test_path):
     labels = set()
     for data_path in [train_path, test_path]:

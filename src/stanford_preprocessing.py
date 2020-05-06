@@ -226,7 +226,6 @@ class GCNDataset(Dataset):
 
 
 if __name__ == '__main__':
-    import pickle
     from src.data import Treebank, SyntaxTree
 
     embedding_map = load_glove_embeddings('data/glove.6B.200d.txt')
@@ -234,7 +233,7 @@ if __name__ == '__main__':
     with open('data/stanfordSentimentTreebank/dev.txt') as f:
         for line in tqdm(f.readlines()):
             tree = parse_tree(line)
-            sentence = extract_sentence(tree)
+            sentence = extract_tokens(tree)
             label = tree.label
             trees.append(SyntaxTree(sentence, tree, label))
     treebank = Treebank(trees)
