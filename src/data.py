@@ -31,37 +31,6 @@ class Corpus(Dataset):
         return torch.LongTensor([doc.label for doc in self.data])
 
 
-class SyntaxTree:
-    def __init__(self, text, tree, label):
-        '''
-        :param text: list of strings, representing the words with the sentence
-        :param tree: list of indices of corresponding parent words in the text (0-index)
-            with -1 indicating the root
-        '''
-        self.text = text
-        self.tree = tree
-        self.label = label
-
-
-class Treebank(Dataset):
-    def __init__(self, trees):
-        self.data = trees
-    
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, item):
-        return self.data[item]
-    
-    def shuffle(self, seed=None):
-        if seed is not None:
-            random.seed(seed)
-        random.shuffle(self.data)
-    
-    def labels(self):
-        return torch.FloatTensor([tree.label for tree in self.data])
-
-
 def get_vocabulary(vocab_path):
     vocabulary = []
     with open(vocab_path, 'r') as f:
@@ -130,6 +99,74 @@ def save_vocabulary(out_path, train_path, test_path, doc_freq_threshold=5):
             vocab.append(w)
     with open(out_path, 'w+') as f:
         f.write('\n'.join(vocab))
+
+
+class SyntaxTree:
+    def __init__(self, text, tree, label):
+        '''
+        :param text: list of strings, representing the words with the sentence
+        :param tree: list of indices of corresponding parent words in the text (0-index)
+            with -1 indicating the root
+        '''
+        self.text = text
+        self.tree = tree
+        self.label = label
+
+
+class Treebank(Dataset):
+    def __init__(self, trees):
+        self.data = trees
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, item):
+        return self.data[item]
+    
+    def shuffle(self, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        random.shuffle(self.data)
+    
+    def labels(self):
+        return torch.FloatTensor([tree.label for tree in self.data])
+
+
+def build_treebank(data_path):
+    trees = []
+    with open(data_path, 'r') as f:
+        for line in tqdm(f.readlines()):
+            tree = parse_tree(line)
+            sentence = extract_tokens(tree)
+            label = tree.label
+            trees.append(SyntaxTree(sentence, tree, label))
+    dev_treebank = Treebank(trees)
+
+
+class GCNInput:
+    def __init__(self, adj, inp, label):
+        self.adj = adj
+        self.inp = inp
+        self.label = label
+
+
+class GCNDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, item):
+        return self.data[item]
+    
+    def shuffle(self, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        random.shuffle(self.data)
+    
+    def labels(self):
+        return torch.FloatTensor([ex.label for ex in self.data])
 
 
 if __name__ == '__main__':

@@ -3,7 +3,6 @@ Code for processing data from the Stanford Sentiment Treebank dataset into the i
 '''
 
 import torch
-from torch.utils.data import Dataset
 from tqdm.auto import tqdm
 
 
@@ -128,7 +127,7 @@ def extract_tokens(root):
     
     left = extract_tokens(root.children[0])
     right = extract_tokens(root.children[-1])
-    return left + [root.text] + right  if len(root.text) > 0 else left + right
+    return left + [root.text] + right if len(root.text) > 0 else left + right
 
 
 def extract_sentence(root):
@@ -199,34 +198,8 @@ def extract_adj_matrix_and_input(root, embedding_map, default_gen_func):
     return adj, inp
 
 
-class GCNInput:
-    def __init__(self, adj, inp, label):
-        self.adj = adj
-        self.inp = inp
-        self.label = label
-
-
-class GCNDataset(Dataset):
-    def __init__(self, data):
-        self.data = data
-    
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, item):
-        return self.data[item]
-    
-    def shuffle(self, seed=None):
-        if seed is not None:
-            random.seed(seed)
-        random.shuffle(self.data)
-    
-    def labels(self):
-        return torch.FloatTensor([ex.label for ex in self.data])
-
-
 if __name__ == '__main__':
-    from src.data import Treebank, SyntaxTree
+    from src.data import Treebank, SyntaxTree, GCNInput, GCNDataset
 
     embedding_map = load_glove_embeddings('data/glove.6B.200d.txt')
     trees = []
