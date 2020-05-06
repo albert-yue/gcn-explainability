@@ -18,8 +18,37 @@ def load_glove_embeddings(filepath):
     return mapping
 
 
-def generate_unknown_embedding():
-    return 
+def generate_random_embedding(embed_dim, mean=0.0, std=0.38):
+    '''
+    Generate a tensor of size (1, embed_dim) with values sampled
+    from the normal distribution with given mean and standard deviation.
+
+    The defaults are for the normal distribution fitted to the
+    values of the pretrained 200-dim GloVe embeddings.
+    '''
+    return torch.empty(1, embed_dim).normal_(mean=mean, std=std)
+
+
+def get_embedding(token, embedding_map, default_gen_func, try_user_input=False):
+    token = token.lower()
+    if token in embedding_map:
+        return embedding_map[token]
+    
+    if try_user_input:
+        print('Token %s not found in map' % token)
+        try:
+            while True:
+                alt = input('Try alternative: ')
+                if alt in embedding_map:
+                    return embedding_map[alt.lower()]
+                elif alt == '<skip>':
+                    raise KeyboardInterrupt
+        except KeyboardInterrupt:
+            pass
+
+    new_embedding = default_gen_func()
+    embedding_map[token] = new_embedding
+    return new_embedding
 
 
 class LabelledBinaryParseTree:
@@ -139,24 +168,25 @@ def extract_parent_ptrs(root, index_offset=0, parent=-1):
     return extract_parent_ptrs(left, index_offset=index_offset, parent=index) + [parent] + extract_parent_ptrs(right, index_offset=index+1, parent=index)
 
 
-def extract_embeddings(root, embedding_map):
+def extract_embeddings(root, embedding_map, default_gen_func, try_user_input=False):
     if len(root.text) > 0:
-        root_embedding = embedding_map[root.text.lower()]
+        root_embedding = get_embedding(root.text.lower(), embedding_map, default_gen_func, try_user_input)
     else:
-        root_embedding = embedding_map[root.left_word.lower()] + embedding_map[root.right_word.lower()]
+        root_embedding = get_embedding(root.left_word.lower(), embedding_map, default_gen_func, try_user_input) + \
+                         get_embedding(root.right_word.lower(), embedding_map, default_gen_func, try_user_input)
 
     if len(root.children) == 0:
         return [root_embedding]
     
-    left = extract_embeddings(root.children[0], embedding_map)
-    right = extract_embeddings(root.children[-1], embedding_map)
+    left = extract_embeddings(root.children[0], embedding_map, default_gen_func)
+    right = extract_embeddings(root.children[-1], embedding_map, default_gen_func)
     return left + [root_embedding] + right
 
 
-def extract_adj_matrix_and_input(root, embedding_map):
+def extract_adj_matrix_and_input(root, embedding_map, default_gen_func):
     augment_tree_metadata(root)
     
-    embeddings = extract_embeddings(root, embedding_map)
+    embeddings = extract_embeddings(root, embedding_map, default_gen_func)
     inp = torch.cat(embeddings, dim=0)
 
     parent_ptrs = extract_parent_ptrs(root)
@@ -209,10 +239,18 @@ if __name__ == '__main__':
             trees.append(SyntaxTree(sentence, tree, label))
     treebank = Treebank(trees)
 
+    default_gen_func = lambda: generate_random_embedding(200, 0.0, 0.38)
+
+    orig_num = len(embedding_map)
+
     inputs = []
     for example in treebank:
         tree = example.tree
-        adj, inp = extract_adj_matrix_and_input(tree, embedding_map)
+        adj, inp = extract_adj_matrix_and_input(tree, embedding_map, default_gen_func)
         inputs.append(GCNInput(adj, inp, example.label))
+    
+    print('Number missing GloVe embedding:', len(embedding_map) - orig_num)
+
     dataset = GCNDataset(inputs)
-    torch.save(dataset, 'stanford_dev.pt')
+    all_data = {'treebank': treebank, 'inputs': dataset}
+    torch.save(all_data, 'stanford_dev.pt')
