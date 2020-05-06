@@ -3,6 +3,7 @@ from sklearn.metrics import accuracy_score
 import torch
 import torch.nn as nn
 from torch.optim import Adam
+from tqdm.auto import tqdm
 
 
 def accuracy(preds, targets):
@@ -14,7 +15,7 @@ def evaluate(model, dataset, targets, metric_fn):
     model.eval()
     dataset_preds = []
 
-    for example in tqdm(dataset):
+    for example in dataset:
         with torch.no_grad():
             preds = model(example.adj, example.inp)
         dataset_preds.append(preds)
