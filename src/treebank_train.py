@@ -50,7 +50,7 @@ def train(model, train_dataset, val_dataset, batch_size=50, epochs=200, init_lr=
             model.zero_grad()
             for example in batch:
                 out = model(example.adj, example.inp)
-                loss = loss_fn(out, example.label)
+                loss = loss_fn(out, torch.tensor([[example.label]]))
                 loss.backward()
             optim.step()
             
