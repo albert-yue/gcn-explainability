@@ -20,7 +20,7 @@ def evaluate(model, dataset, targets, metric_fn):
             preds = model(example.adj, example.inp)
         dataset_preds.append(preds)
 
-    dataset_preds = torch.cat(dataset_preds, dim=-1)
+    dataset_preds = torch.cat(dataset_preds, dim=0)
     return metric_fn(dataset_preds, targets)
 
 
