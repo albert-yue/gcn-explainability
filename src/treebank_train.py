@@ -57,9 +57,9 @@ def train(model, train_dataset, val_dataset, batch_size=50, epochs=200, init_lr=
             
             epoch_loss += loss.data.item()
 
-        train_losses.append(epoch_loss)
+        train_losses.append(epoch_loss / num_batches)
         if epoch % print_every == 0:
-            print('Train mean cross-entropy:', loss.item())
+            print('Train mean cross-entropy:', epoch_loss.item() / num_batches)
 
         if epoch % val_every == 0:
             val_loss = evaluate(model, val_dataset, val_dataset.labels(), loss_fn)
