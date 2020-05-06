@@ -36,7 +36,7 @@ def train(model, train_adj_matrix, val_adj_matrix, train_labels, val_labels, voc
     train_losses = []
     val_losses = []
     best_val_loss = float('inf')
-    # epochs_with_no_improvement = 0
+    epochs_with_no_improvement = 0
     for epoch in range(epochs):
         if epoch % print_every == 0:
             print('Epoch', epoch)

@@ -59,3 +59,30 @@ class GCN(nn.Module):
             out = self.softmax(out)
         
         return out
+
+
+class GCNTreebankModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, dropout=0.):
+        super(GCNTreebankModel, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+
+        self.dropout = nn.Dropout(dropout)
+        self.act_func = nn.ReLU()
+        self.softmax = nn.LogSoftmax(dim=-1)
+
+        self.layer1 = GraphConv(input_size, hidden_size)
+        self.layer2 = GraphConv(hidden_size, output_size)
+
+    
+    def forward(self, adj_matrix, inp=None):
+        out = self.act_func(self.layer1(adj_matrix, inp))
+        out = self.dropout(out)
+        out = self.layer2(adj_matrix, out)
+        out = torch.mean(out, dim=0, keepdim=True)
+        
+        if not self.training:
+            out = self.softmax(out)
+        
+        return out
