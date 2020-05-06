@@ -129,7 +129,7 @@ class Treebank(Dataset):
         random.shuffle(self.data)
     
     def labels(self):
-        return torch.FloatTensor([tree.label for tree in self.data])
+        return torch.LongTensor([tree.label for tree in self.data])
 
 
 def build_treebank(data_path):
@@ -166,7 +166,7 @@ class GCNDataset(Dataset):
         random.shuffle(self.data)
     
     def labels(self):
-        return torch.FloatTensor([ex.label for ex in self.data])
+        return torch.LongTensor([ex.label for ex in self.data])
 
 
 if __name__ == '__main__':
