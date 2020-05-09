@@ -198,6 +198,12 @@ def extract_adj_matrix_and_input(root, embedding_map, default_gen_func):
     return adj, inp
 
 
+def normalize_adj(adj):
+    adj = inputs.adj
+    d = torch.diag(adj.sum(dim=1) ** (-1/2))
+    return d@adj@d
+
+
 if __name__ == '__main__':
     from src.data import Treebank, SyntaxTree, GCNInput, GCNDataset
 
