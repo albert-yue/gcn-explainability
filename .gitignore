@@ -1,4 +1,5 @@
-# Datasets
+# Models and Datasets
+checkpoints/
 data/
 
 # Byte-compiled / optimized / DLL files
